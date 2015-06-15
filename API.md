@@ -42,3 +42,17 @@ Authorization: Qiniu <MacToken>
 ```
 200 OK
 ```
+
+# 实现细节
+
+## 本地缓存结构
+
+```
+$datavolume/
+	<Fid>.data
+$ssd/
+	<VolumeId>/
+		.metadata
+		.binlog
+```
+
