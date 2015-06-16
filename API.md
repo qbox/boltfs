@@ -13,7 +13,9 @@ Content-Type: application/json
 Authorization: Qiniu <MacToken>
 
 {
-	"title": <VolumeTitle>
+	"title": <VolumeTitle>,
+	"type": <DiskType>,
+	"size": <DiskSize>
 }
 ```
 
