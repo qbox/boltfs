@@ -5,6 +5,13 @@
 	"max_indent": 5,
 	"formated": false,
 	"ignore":[
+		"src/bazil.org/fuse/fs/serve.go",
+		"src/bazil.org/fuse/fuse.go",
+		"src/golang.org/x/sys/unix/zerrors_linux_arm64.go",
+		"src/golang.org/x/sys/unix/zerrors_linux_ppc64.go",
+		"src/golang.org/x/sys/unix/zerrors_linux_ppc64le.go",
+		"src/golang.org/x/sys/unix/zsyscall_linux_amd64.go",
+		"src/golang.org/x/sys/windows/zsyscall_windows.go"
 	],
 	"fatal":[
 		"formated",
