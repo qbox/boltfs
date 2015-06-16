@@ -9,6 +9,10 @@ rebuild:
 install: all
 	@echo
 
+travis_test:
+	cd src/golang.org; go test ./...
+	cd src/qiniu.com; go test ./...
+
 test:
 	cd src; go test ./...
 
