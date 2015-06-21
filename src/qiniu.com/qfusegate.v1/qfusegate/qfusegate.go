@@ -15,7 +15,7 @@ import (
 // ---------------------------------------------------------------------------
 
 type Config struct {
-	Gate qfusegate.Config `json:,inline`
+	Gate qfusegate.Config `json:"gate"`
 
 	BindHost   string `json:"bind_host"`
 	MaxProcs   int    `json:"max_procs"`
@@ -32,6 +32,7 @@ func main() {
 	if err := config.Load(&conf); err != nil {
 		log.Fatal("config.Load failed:", err)
 	}
+	log.Info("config:", conf)
 
 	// General Settings
 

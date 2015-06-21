@@ -24,3 +24,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+mounts.conf
+mounts.conf.bak
+

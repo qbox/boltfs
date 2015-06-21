@@ -5,8 +5,10 @@ import (
 	"io"
 	"os"
 	"sync"
+	"syscall"
 
 	"bazil.org/fuse"
+	"github.com/qiniu/errors"
 	"github.com/qiniu/log.v1"
 )
 
@@ -29,14 +31,15 @@ func New(cfg *Config) (p *Service, err error) {
 
 	var mounts []*MountArgs
 
-	f, err := os.Open(cfg.SaveToFile)
-	if err == nil {
+	f, err2 := os.Open(cfg.SaveToFile)
+	if err2 == nil {
 		json.NewDecoder(f).Decode(&mounts)
 		f.Close()
 	}
 
 	p = &Service{
 		Config: *cfg,
+		conns:  make(map[string]*Conn),
 	}
 	for _, args := range mounts {
 		fuse.Unmount(args.MountPoint)
@@ -86,10 +89,15 @@ type MountArgs struct {
 func (p *Service) PostMount(args *MountArgs) (err error) {
 
 	p.mutex.Lock()
-	err = p.mount(args)
-	if err == nil {
-		p.mounts = append(p.mounts, args)
-		err = p.save()
+	_, ok := p.conns[args.MountPoint]
+	if ok {
+		err = syscall.EEXIST
+	} else {
+		err = p.mount(args)
+		if err == nil {
+			p.mounts = append(p.mounts, args)
+			err = p.save()
+		}
 	}
 	p.mutex.Unlock()
 	return
@@ -101,23 +109,28 @@ func (p *Service) save() (err error) {
 
 	backup, err := os.Create(p.BackupFile)
 	if err != nil {
+		err = errors.Info(err, "os.Create:", p.BackupFile).Detail(err)
 		return
 	}
 	defer backup.Close()
 
-	old, err := os.Open(p.SaveToFile)
-	if err == nil {
+	old, err2 := os.Open(p.SaveToFile)
+	if err2 == nil {
 		io.Copy(backup, old)
 		old.Close()
 	}
 
 	f, err := os.Create(p.SaveToFile)
 	if err != nil {
+		err = errors.Info(err, "os.Create:", p.SaveToFile).Detail(err)
 		return
 	}
 	defer f.Close()
 
 	err = json.NewEncoder(f).Encode(p.mounts)
+	if err != nil {
+		err = errors.Info(err, "json.Marshal:", p.mounts).Detail(err)
+	}
 	return
 }
 
@@ -125,16 +138,21 @@ func (p *Service) mount(args *MountArgs) (err error) {
 
 	options, err := mountOptions(args)
 	if err != nil {
+		err = errors.Info(err, "parse mount options failed").Detail(err)
 		return
 	}
 
+	log.Info("To mount:", args.MountPoint)
 	c, err := fuse.Mount(args.MountPoint, options...)
 	if err != nil {
+		err = errors.Info(err, "fuse.Mount:", args.MountPoint, options).Detail(err)
 		return
 	}
 
+	log.Info("NewConn:", *args)
 	conn, err := NewConn(c, args)
 	if err != nil {
+		err = errors.Info(err, "qfusegate.NewConn failed").Detail(err)
 		return
 	}
 	p.conns[args.MountPoint] = conn
@@ -150,6 +168,12 @@ func (p *Service) mount(args *MountArgs) (err error) {
 
 func mountOptions(args *MountArgs) (options []fuse.MountOption, err error) {
 
+	options = []fuse.MountOption{
+		fuse.FSName("helloworld"),
+		fuse.Subtype("hellofs"),
+		fuse.LocalVolume(),
+		fuse.VolumeName("Hello world!"),
+	}
 	return
 }
 
