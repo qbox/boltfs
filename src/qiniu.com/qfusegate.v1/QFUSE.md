@@ -44,6 +44,37 @@ Flags        InitFlags
 MaxWrite uint32
 ```
 
+其中 InitFlags：
+
+```
+type InitFlags uint32
+
+const (
+	InitAsyncRead       InitFlags = 1 << 0
+	InitPosixLocks      InitFlags = 1 << 1
+	InitFileOps         InitFlags = 1 << 2
+	InitAtomicTrunc     InitFlags = 1 << 3
+	InitExportSupport   InitFlags = 1 << 4
+	InitBigWrites       InitFlags = 1 << 5
+	InitDontMask        InitFlags = 1 << 6
+	InitSpliceWrite     InitFlags = 1 << 7
+	InitSpliceMove      InitFlags = 1 << 8
+	InitSpliceRead      InitFlags = 1 << 9
+	InitFlockLocks      InitFlags = 1 << 10
+	InitHasIoctlDir     InitFlags = 1 << 11
+	InitAutoInvalData   InitFlags = 1 << 12
+	InitDoReaddirplus   InitFlags = 1 << 13
+	InitReaddirplusAuto InitFlags = 1 << 14
+	InitAsyncDIO        InitFlags = 1 << 15
+	InitWritebackCache  InitFlags = 1 << 16
+	InitNoOpenSupport   InitFlags = 1 << 17
+
+	InitCaseSensitive InitFlags = 1 << 29 // OS X only
+	InitVolRename     InitFlags = 1 << 30 // OS X only
+	InitXtimes        InitFlags = 1 << 31 // OS X only
+)
+```
+
 ## 终止（/v1/destroy）
 
 * A `destroy` request is sent by the kernel when unmounting the file system.
@@ -90,25 +121,7 @@ Mask  uint32
 ## 取属性（/v1/getattr）
 
 * A `getattr` request asks for the metadata for the file denoted by Inode.
-* An Attr is the metadata for a single file or directory:
-
-```
-Valid time.Duration // how long Attr can be cached
-
-Inode  uint64      // inode number
-Size   uint64      // size in bytes
-Blocks uint64      // size in blocks
-Atime  time.Time   // time of last access
-Mtime  time.Time   // time of last modification
-Ctime  time.Time   // time of last inode change
-Crtime time.Time   // time of creation (OS X only)
-Mode   os.FileMode // file mode
-Nlink  uint32      // number of links
-Uid    uint32      // owner uid
-Gid    uint32      // group gid
-Rdev   uint32      // device numbers
-Flags  uint32      // chflags(2) flags (OS X only)
-```
+* An Attr is the metadata for a single file or directory.
 
 请求体：
 
@@ -120,6 +133,28 @@ Inode uint64
 
 ```
 Attr Attr
+```
+
+其中 Attr：
+
+```
+type Attr struct {
+	Valid time.Duration // how long Attr can be cached
+
+	Inode  uint64      // inode number
+	Size   uint64      // size in bytes
+	Blocks uint64      // size in blocks
+	Atime  time.Time   // time of last access
+	Mtime  time.Time   // time of last modification
+	Ctime  time.Time   // time of last inode change
+	Crtime time.Time   // time of creation (OS X only)
+	Mode   os.FileMode // file mode
+	Nlink  uint32      // number of links
+	Uid    uint32      // owner uid
+	Gid    uint32      // group gid
+	Rdev   uint32      // device numbers
+	Flags  uint32      // chflags(2) flags (OS X only)
+}
 ```
 
 ## 取扩展属性列表（/v1/listxattr)
@@ -251,6 +286,49 @@ Flags  OpenFlags
 ```
 Handle uint64
 Flags  OpenResponseFlags
+```
+
+其中 OpenFlags：
+
+```
+// OpenFlags are the O_FOO flags passed to open/create/etc calls. For
+// example, os.O_WRONLY | os.O_APPEND.
+type OpenFlags uint32
+
+const (
+	// Access modes. These are not 1-bit flags, but alternatives where
+	// only one can be chosen. See the IsReadOnly etc convenience
+	// methods.
+	OpenReadOnly  OpenFlags = syscall.O_RDONLY
+	OpenWriteOnly OpenFlags = syscall.O_WRONLY
+	OpenReadWrite OpenFlags = syscall.O_RDWR
+
+	OpenAppend    OpenFlags = syscall.O_APPEND
+	OpenCreate    OpenFlags = syscall.O_CREAT
+	OpenExclusive OpenFlags = syscall.O_EXCL
+	OpenSync      OpenFlags = syscall.O_SYNC
+	OpenTruncate  OpenFlags = syscall.O_TRUNC
+)
+
+// OpenAccessModeMask is a bitmask that separates the access mode
+// from the other flags in OpenFlags.
+const OpenAccessModeMask OpenFlags = syscall.O_ACCMODE
+```
+
+其中 OpenResponseFlags：
+
+```
+// The OpenResponseFlags are returned in the OpenResponse.
+type OpenResponseFlags uint32
+
+const (
+	OpenDirectIO    OpenResponseFlags = 1 << 0 // bypass page cache for this open file
+	OpenKeepCache   OpenResponseFlags = 1 << 1 // don't invalidate the data cache on open
+	OpenNonSeekable OpenResponseFlags = 1 << 2 // (Linux?)
+
+	OpenPurgeAttr OpenResponseFlags = 1 << 30 // OS X
+	OpenPurgeUBC  OpenResponseFlags = 1 << 31 // OS X
+)
 ```
 
 ## 创建文件（/v1/create）
@@ -455,6 +533,13 @@ Flags  WriteFlags
 Size int
 ```
 
+其中 WriteFlags：
+
+```
+// The WriteFlags are passed in WriteRequest.
+type WriteFlags uint32
+```
+
 ## 设置属性（/v1/setattr）
 
 * A `setattr` request asks to change one or more attributes associated with a file, as indicated by Valid.
@@ -526,6 +611,17 @@ Dir          bool // is this Releasedir?
 ```
 
 返回体：无
+
+其中 ReleaseFlags：
+
+```
+// The ReleaseFlags are used in the Release exchange.
+type ReleaseFlags uint32
+
+const (
+	ReleaseFlush ReleaseFlags = 1 << 0
+)
+```
 
 ## 忘记Inode（/v1/forget）
 

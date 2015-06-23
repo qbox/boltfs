@@ -11,13 +11,18 @@ import (
 // ---------------------------------------------------------------------------
 
 type Conn struct {
-	c    *fuse.Conn
-	args *MountArgs
+	target   string
+	c        *fuse.Conn
+	readOnly bool
 }
 
 func NewConn(c *fuse.Conn, args *MountArgs) (p *Conn, err error) {
 
-	p = &Conn{c, args}
+	p = &Conn{
+		c:        c,
+		target:   args.TargetFSHost,
+		readOnly: args.ReadOnly != 0,
+	}
 	return
 }
 
