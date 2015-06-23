@@ -62,34 +62,34 @@ func New(cfg *Config) (p *Service, err error) {
 type MountArgs struct {
 	// 加载点
 	//
-	MountPoint  string `json:"mountpoint"`
+	MountPoint string `json:"mountpoint"`
 
 	// 目标文件系统位置(Host)。如 "http://127.0.0.1:7777"
 	//
-	TargeFSHost string `json:"target"`
+	TargetFSHost string `json:"target"`
 
 	// the file system name (also called source) that is visible in the list of mounted file systems
 	//
-	FSName      string `json:"fsname"`
+	FSName string `json:"fsname"`
 
 	// Subtype sets the subtype of the mount. The main type is always `fuse`.
 	// The type in a list of mounted file systems will look like `fuse.foo`.
 	//
-	Subtype     string `json:"subtype"`
+	Subtype string `json:"subtype"`
 
 	// VolumeName sets the volume name shown in Finder.
 	// OS X only. Others ignore this option.
 	//
-	Name        string `json:"name"`
+	Name string `json:"name"`
 
 	// "allow_other" allows other users to access the file system.
 	// "allow_root" allows other users to access the file system.
 	//
-	AllowMode   string `json:"allow"`
+	AllowMode string `json:"allow"`
 
 	// ReadOnly makes the mount read-only.
 	//
-	ReadOnly    int    `json:"readonly"`
+	ReadOnly int `json:"readonly"`
 }
 
 func (p *Service) PostMount(args *MountArgs) (err error) {
