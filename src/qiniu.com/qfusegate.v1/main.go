@@ -9,7 +9,13 @@ import (
 
 	"bazil.org/fuse"
 	"github.com/qiniu/errors"
+	"github.com/qiniu/http/httputil.v1"
 	"github.com/qiniu/log.v1"
+)
+
+var (
+	ErrInvalidAllowMode = httputil.NewError(
+		400, "invalid argument `allow`: value can be `allow_root` or `allow_other`")
 )
 
 // ---------------------------------------------------------------------------
@@ -168,11 +174,27 @@ func (p *Service) mount(args *MountArgs) (err error) {
 
 func mountOptions(args *MountArgs) (options []fuse.MountOption, err error) {
 
-	options = []fuse.MountOption{
-		fuse.FSName("helloworld"),
-		fuse.Subtype("hellofs"),
-		fuse.LocalVolume(),
-		fuse.VolumeName("Hello world!"),
+	if args.FSName != "" {
+		options = append(options, fuse.FSName(args.FSName))
+	}
+	if args.Subtype != "" {
+		options = append(options, fuse.Subtype(args.Subtype))
+	}
+	if args.Name != "" {
+		options = append(options, fuse.VolumeName(args.Name))
+	}
+	switch args.AllowMode {
+	case "":
+	case "allow_root":
+		options = append(options, fuse.AllowRoot())
+	case "allow_other":
+		options = append(options, fuse.AllowOther())
+	default:
+		err = ErrInvalidAllowMode
+		return
+	}
+	if args.ReadOnly != 0 {
+		options = append(options, fuse.ReadOnly())
 	}
 	return
 }
