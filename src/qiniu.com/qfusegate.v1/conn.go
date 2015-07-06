@@ -57,37 +57,63 @@ func (p *Conn) serveRequest(r fuse.Request) {
 	switch r := r.(type) {
 	// Handle operations.
 	case *fuse.ReadRequest:
-		_, _ = r, ctx
+		handleReadRequest(ctx, p.target, r)
 	case *fuse.WriteRequest:
+		handleWriteRequest(ctx, p.target, r)
 	case *fuse.FlushRequest:
+		handleFlushRequest(ctx, p.target, r)
 	case *fuse.FsyncRequest:
+		handleFsyncRequest(ctx, p.target, r)
 	case *fuse.ReleaseRequest:
+		handleReleaseRequest(ctx, p.target, r)
 
 	// Node operations.
 	case *fuse.AccessRequest:
+		handleAccessRequest(ctx, p.target, r)
 	case *fuse.GetattrRequest:
+		handleGetattrRequest(ctx, p.target, r)
 	case *fuse.SetattrRequest:
+		handleSetattrRequest(ctx, p.target, r)
 	case *fuse.SymlinkRequest:
+		handleSymlinkRequest(ctx, p.target, r)
 	case *fuse.ReadlinkRequest:
+		handleReadlinkRequest(ctx, p.target, r)
 	case *fuse.LinkRequest:
+		handleLinkRequest(ctx, p.target, r)
 	case *fuse.RemoveRequest:
+		handleRemoveRequest(ctx, p.target, r)
 	case *fuse.LookupRequest:
+		handleLookupRequest(ctx, p.target, r)
 	case *fuse.MkdirRequest:
+		handleMkdirRequest(ctx, p.target, r)
 	case *fuse.OpenRequest:
+		handleOpenRequest(ctx, p.target, r)
 	case *fuse.CreateRequest:
+		handleCreateRequest(ctx, p.target, r)
 	case *fuse.GetxattrRequest:
+		handleGetxattrRequest(ctx, p.target, r)
 	case *fuse.ListxattrRequest:
+		handleListxattrRequest(ctx, p.target, r)
 	case *fuse.SetxattrRequest:
+		handleSetxattrRequest(ctx, p.target, r)
 	case *fuse.RemovexattrRequest:
+		handleRemovexattrRequest(ctx, p.target, r)
 	case *fuse.RenameRequest:
+		handleRenameRequest(ctx, p.target, r)
 	case *fuse.MknodRequest:
+		handleMknodRequest(ctx, p.target, r)
 	case *fuse.ForgetRequest:
+		handleForgetRequest(ctx, p.target, r)
 
 	// FS operations.
 	case *fuse.InterruptRequest:
+		handleInterruptRequest(ctx, p.target, r)
 	case *fuse.InitRequest:
+		handleInitRequest(ctx, p.target, r)
 	case *fuse.StatfsRequest:
+		handleStatfsRequest(ctx, p.target, r)
 	case *fuse.DestroyRequest:
+		handleDestroyRequest(ctx, p.target, r)
 	}
 
 	// Note: To FUSE, ENOSYS means "this server never implements this request."
