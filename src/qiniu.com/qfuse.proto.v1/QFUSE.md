@@ -569,6 +569,35 @@ Flags    uint32 // see chflags(2)
 Attr Attr
 ```
 
+其中 SetattrValid：
+
+```
+// The SetattrValid are bit flags describing which fields in the SetattrRequest
+// are included in the change.
+type SetattrValid uint32
+
+const (
+	SetattrMode   SetattrValid = 1 << 0
+	SetattrUid    SetattrValid = 1 << 1
+	SetattrGid    SetattrValid = 1 << 2
+	SetattrSize   SetattrValid = 1 << 3
+	SetattrAtime  SetattrValid = 1 << 4
+	SetattrMtime  SetattrValid = 1 << 5
+	SetattrHandle SetattrValid = 1 << 6
+
+	// Linux only(?)
+	SetattrAtimeNow  SetattrValid = 1 << 7
+	SetattrMtimeNow  SetattrValid = 1 << 8
+	SetattrLockOwner SetattrValid = 1 << 9 // http://www.mail-archive.com/git-commits-head@vger.kernel.org/msg27852.html
+
+	// OS X only
+	SetattrCrtime   SetattrValid = 1 << 28
+	SetattrChgtime  SetattrValid = 1 << 29
+	SetattrBkuptime SetattrValid = 1 << 30
+	SetattrFlags    SetattrValid = 1 << 31
+)
+```
+
 ## 刷新文件缓存（/v1/flush）
 
 * A `flush` request asks for the current state of an open file to be flushed to storage.
