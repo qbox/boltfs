@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+type Time int64
+
 // ---------------------------------------------------------------------------
 // A `init` request is the first request sent on a FUSE file system.
 
@@ -68,13 +70,13 @@ type GetattrResponse struct {
 // ---------------------------------------------------------------------------
 // A `listxattr` request asks to list the extended attributes associated with Inode.
 
-type ListattrRequest struct {
+type ListxattrRequest struct {
 	Inode    uint64 // inode number
 	Size     uint32 // maximum size to return
 	Position uint32 // offset within attribute list
 }
 
-type ListattrResponse struct {
+type ListxattrResponse struct {
 	XattrNames []byte // 以 '\0' 为分割
 }
 
@@ -105,7 +107,7 @@ type GetxattrResponse struct {
 // ---------------------------------------------------------------------------
 // A `removexattr` request asks to remove an extended attribute associated with Inode.
 
-type RemoveattrRequest struct {
+type RemovexattrRequest struct {
 	Inode uint64
 	Name  string
 }
@@ -290,16 +292,16 @@ type SetattrRequest struct {
 	Valid  fuse.SetattrValid
 	Handle uint64
 	Size   uint64
-	Atime  time.Time
-	Mtime  time.Time
+	Atime  Time
+	Mtime  Time
 	Mode   os.FileMode
 	Uid    uint32
 	Gid    uint32
 
 	// OS X only
-	Bkuptime time.Time
-	Chgtime  time.Time
-	Crtime   time.Time
+	Bkuptime Time
+	Chgtime  Time
+	Crtime   Time
 	Flags    uint32 // see chflags(2)
 }
 
@@ -318,7 +320,7 @@ type FlushRequest struct {
 }
 
 // ---------------------------------------------------------------------------
-// 刷新Inode（/v/fsync）
+// 刷新Inode（/v1/fsync）
 
 type FsyncRequest struct {
 	Handle uint64
