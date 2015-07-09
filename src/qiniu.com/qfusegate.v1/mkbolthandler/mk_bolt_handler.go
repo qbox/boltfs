@@ -208,7 +208,7 @@ func nonFlatTypeOf(t reflect.Type) string {
 	panic("nonFlatTypeOf: unexpected")
 }
 
-func structAssign(prefix string, dest reflect.Type) {
+func requestAssign(prefix string, dest reflect.Type) {
 
 	n := dest.NumField()
 	for i := 0; i < n; i++ {
@@ -232,6 +232,20 @@ func structAssign(prefix string, dest reflect.Type) {
 	}
 }
 
+func responseAssign(prefix string, srcType reflect.Type) {
+
+	n := srcType.NumField()
+	for i := 0; i < n; i++ {
+		f := srcType.Field(i)
+		src := ""
+		switch f.Name {
+		default:
+			src = "ret." + f.Name
+		}
+		fmt.Printf("%s%s: %s,\n", prefix, f.Name, src)
+	}
+}
+
 func gen(types []interface{}) {
 
 	req, resp := typeOf(types[0]), typeOf(types[2])
@@ -250,7 +264,7 @@ func gen(types []interface{}) {
 	} else {
 		argsName := req.Name()
 		fmt.Printf("\targs := &%s{\n", argsName)
-		structAssign("\t\t", req)
+		requestAssign("\t\t", req)
 		fmt.Printf("\t}\n")
 		if isFlatType(req) {
 			fmt.Printf(`
@@ -322,7 +336,8 @@ func gen(types []interface{}) {
 	}
 
 	retName := resp.Name()
-	fmt.Printf("\tret := &%s{}\n\t_ = ret\n\n", retName)
+	fmt.Printf("\tret := &%s{", retName)
+	fmt.Printf("\t}\n")
 
 	if fuseResp.Kind() == reflect.String {
 		fmt.Printf("\treq.Respond(ret.Target)\n}\n\n")
