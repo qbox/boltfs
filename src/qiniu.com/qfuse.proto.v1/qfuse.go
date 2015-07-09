@@ -24,6 +24,7 @@ type InitResponse struct {
 	// greater than InitRequest.MaxReadahead.
 	MaxReadahead uint32
 	Flags        fuse.InitFlags
+
 	// Maximum size of a single write operation.
 	// Linux enforces a minimum of 4 KiB.
 	MaxWrite uint32
@@ -87,9 +88,6 @@ type GetxattrRequest struct {
 	// Inode number
 	Inode  uint64
 
-	// Name of the attribute requested.
-	Name string
-
 	// Maximum size to return.
 	Size uint32
 
@@ -98,6 +96,9 @@ type GetxattrRequest struct {
 	// Only valid for OS X, and then only with the resource fork
 	// attribute.
 	Position uint32
+
+	// Name of the attribute requested.
+	Name string
 }
 
 type GetxattrResponse struct {
@@ -173,9 +174,9 @@ type OpenResponse struct {
 
 type CreateRequest struct {
 	Inode  uint64
-	Name   string
 	Flags  fuse.OpenFlags
 	Mode   os.FileMode
+	Name   string
 }
 
 type CreateResponse struct {
@@ -188,8 +189,8 @@ type CreateResponse struct {
 
 type MkdirRequest struct {
 	Inode  uint64
-	Name   string
 	Mode   os.FileMode
+	Name   string
 }
 
 type MkdirResponse LookupResponse
@@ -221,8 +222,8 @@ type ReadlinkResponse struct {
 
 type LinkRequest struct {
 	Inode    uint64
-	NewName  string
 	OldInode uint64
+	NewName  string
 }
 
 type LinkResponse LookupResponse
@@ -232,9 +233,9 @@ type LinkResponse LookupResponse
 
 type MknodRequest struct {
 	Inode  uint64
-	Name   string
 	Mode   os.FileMode
 	Rdev   uint32
+	Name   string
 }
 
 type MknodResponse LookupResponse
@@ -253,8 +254,8 @@ type RenameRequest struct {
 
 type RemoveRequest struct {
 	Inode  uint64
-	Name   string // name of the entry to remove
 	Dir    bool   // is this rmdir?
+	Name   string // name of the entry to remove
 }
 
 // ---------------------------------------------------------------------------
@@ -277,8 +278,8 @@ type ReadResponse struct {
 type WriteRequest struct {
 	Handle uint64
 	Offset int64
-	Data   []byte
 	Flags  fuse.WriteFlags
+	Data   []byte
 }
 
 type WriteResponse struct {

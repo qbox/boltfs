@@ -10,7 +10,7 @@ import (
 	"bazil.org/fuse"
 	"github.com/qiniu/errors"
 	"github.com/qiniu/http/httputil.v1"
-	"github.com/qiniu/log.v1"
+	"qiniupkg.com/x/log.v7"
 )
 
 var (

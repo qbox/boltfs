@@ -4,6 +4,7 @@ import (
 	"bazil.org/fuse"
 	"fmt"
 	"reflect"
+	"strings"
 
 	. "qiniu.com/qfuse.proto.v1"
 )
@@ -149,18 +150,208 @@ var types = []interface{}{
 
 // ---------------------------------------------------------------------------
 
+func isFlatType(t reflect.Type) bool {
+
+	kind := t.Kind()
+	if kind <= reflect.Complex128 {
+		return true
+	}
+	if kind != reflect.Struct {
+		return false
+	}
+
+	n := t.NumField()
+	for i := 0; i < n; i++ {
+		f := t.Field(i)
+		if !isFlatType(f.Type) {
+			return false
+		}
+	}
+	return true
+}
+
+type nonFlatTypeInfo struct {
+	Type   string  // type name of first NonFlatType
+	Name   string  // field name of first NonFlatType
+	Idx    int     // field index of first NonFlatType
+	Count  int     // count of NonFlatType
+	Offset uintptr // offset of first NonFlatType
+}
+
+func nonFlatTypeInfoOf(t reflect.Type) nonFlatTypeInfo {
+
+	if t.Kind() != reflect.Struct {
+		panic("t != struct")
+	}
+
+	n := t.NumField()
+	for i := 0; i < n; i++ {
+		f := t.Field(i)
+		if !isFlatType(f.Type) {
+			return nonFlatTypeInfo{nonFlatTypeOf(f.Type), f.Name, i, n-i, f.Offset}
+		}
+	}
+	panic("nonFlatTypeInfoOf: unexpected")
+}
+
+func nonFlatTypeOf(t reflect.Type) string {
+
+	switch t.Kind() {
+	case reflect.String:
+		return "strings"
+	case reflect.Slice:
+		if t.Elem().Kind() == reflect.Uint8 {
+			return "bytes"
+		}
+	}
+	println("nonFlatTypeOf:", t.String())
+	panic("nonFlatTypeOf: unexpected")
+}
+
+func requestAssign(dest reflect.Type) {
+
+	n := dest.NumField()
+	for i := 0; i < n; i++ {
+		f := dest.Field(i)
+		src := ""
+		switch f.Name {
+		case "Inode":       src = "uint64(req.Node)"
+		case "OldInode":    src = "uint64(req.OldNode)"
+		case "NewDirInode": src = "uint64(req.NewDir)"
+		case "Handle":      src = "uint64(req.Handle)"
+		case "LookupReqid": src = "uint64(req.N)"
+		case "IntrReqId":   src = "uint64(req.IntrID)"
+		default:
+			if f.Type.String() == "qfuse.Time" {
+				src = fmt.Sprintf("Time(req.%s.UnixNano())", f.Name)
+			} else {
+				src = "req." + f.Name
+			}
+		}
+		fmt.Printf("\t\t%s: %s,\n", f.Name, src)
+	}
+}
+
+func responseAssign(srcType reflect.Type) {
+
+	n := srcType.NumField()
+	for i := 0; i < n; i++ {
+		f := srcType.Field(i)
+		if f.Anonymous {
+			responseAssign(f.Type)
+			continue
+		}
+		src, destName := "ret." + f.Name, f.Name
+		switch f.Name {
+		case "Inode":      destName, src = "Node", "fuse.NodeID(ret.Inode)"
+		case "Handle":     src = "fuse.HandleID(ret.Handle)"
+		case "XattrNames": destName = "Xattr"
+		}
+		fmt.Printf("\tfuseResp.%s = %s\n", destName, src)
+	}
+}
+
 func gen(types []interface{}) {
 
 	req, resp := typeOf(types[0]), typeOf(types[2])
 	fuseReq, fuseResp := typeOf(types[1]), typeOf(types[3])
 
-	_ = req
-	_ = resp
-	_ = fuseReq
-	_ = fuseResp
-
 	reqName := fuseReq.Name()
-	fmt.Printf("func handle%s(ctx Context, target string, r *fuse.%s) {\n}\n\n", reqName, reqName)
+	reqPath := "/v1/" + strings.ToLower(strings.TrimSuffix(reqName, "Request"))
+	fmt.Printf(`func handle%s(ctx Context, host string, req *fuse.%s) {
+
+	client := rpc.DefaultClient
+
+`, reqName, reqName)
+
+	if req == nil {
+		fmt.Printf("\tresp, err := client.DoRequest(ctx, \"POST\", host + \"%s\")\n", reqPath)
+	} else {
+		argsName := req.Name()
+		fmt.Printf("\targs := &%s{\n", argsName)
+		requestAssign(req)
+		fmt.Printf("\t}\n")
+		if isFlatType(req) {
+			fmt.Printf(`
+	n := unsafe.Sizeof(args)
+	body := toReader(unsafe.Pointer(&args), n)
+	resp, err := client.DoRequestWith(ctx, "POST", host + "%s", "application/fuse", body, int(n))
+`, reqPath)
+		} else {
+			info := nonFlatTypeInfoOf(req)
+			if info.Count == 1 && info.Offset == 0 {
+				fmt.Printf(`
+	body := %s.NewReader(args.%s)
+	resp, err := client.DoRequestWith(
+		ctx, "POST", host + "%s", "application/fuse", body, len(args.%s))
+`, info.Type, info.Name, reqPath, info.Name)
+			} else if info.Count == 1 && info.Offset != 0 {
+				fmt.Printf(`
+	n := unsafe.Offsetof(args.%s)
+	body1 := toReader(unsafe.Pointer(&args), n)
+	body := io.MultiReader(body1, %s.NewReader(args.%s))
+	resp, err := client.DoRequestWith(
+		ctx, "POST", host + "%s", "application/fuse", body, int(n)+len(args.%s))
+`, info.Name, info.Type, info.Name, reqPath, info.Name)
+			} else {
+				fmt.Printf(`
+	n := unsafe.Offsetof(args.%s)
+	body1 := toReader(unsafe.Pointer(&args), n)
+
+	var encoder stringEncoder
+`, info.Name)
+				for i := 0; i < info.Count; i++ {
+					f := req.Field(info.Idx + i)
+					switch {
+					case f.Type.Kind() == reflect.String:
+						fmt.Printf(
+`	encoder.PutString(args.%s)
+`, f.Name)
+					case f.Type.Kind() == reflect.Slice && f.Type.Elem().Kind() == reflect.Uint8:
+						fmt.Printf(
+`	encoder.PutBytes(args.%s)
+`, f.Name)
+					default:
+						println("type:", req.String())
+						panic("field must be string or []byte")
+					}
+				}
+				fmt.Printf(`
+	body := io.MultiReader(body1, &encoder.Buffer)
+	resp, err := client.DoRequestWith(
+		ctx, "POST", host + "%s", "application/fuse", body, int(n)+encoder.Len())
+`, reqPath)
+			}
+		}
+	}
+	fmt.Printf(`	if err != nil {
+		replyError(req, err)
+		return
+	}
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+`)
+
+	if resp == nil {
+		fmt.Printf("\treq.Respond()\n}\n\n")
+		return
+	}
+
+	retName := resp.Name()
+	fmt.Printf("\tret := &%s{}\n\t_ = ret\n\n", retName)
+
+	if fuseResp.Kind() == reflect.String {
+		fmt.Printf("\treq.Respond(ret.Target)\n}\n\n")
+		return
+	}
+
+	respName := fuseResp.Name()
+	fmt.Printf("\tfuseResp := new(fuse.%s)\n", respName)
+	responseAssign(resp)
+	fmt.Printf("\treq.Respond(fuseResp)\n}\n\n")
 }
 
 func typeOf(v interface{}) reflect.Type {
@@ -182,7 +373,15 @@ func main() {
 
 import (
 	"bazil.org/fuse"
+	"bytes"
+	"io"
+	"io/ioutil"
+	"qiniupkg.com/x/rpc.v7"
+	"strings"
+	"unsafe"
+
 	. "golang.org/x/net/context"
+	. "qiniu.com/qfuse.proto.v1"
 )
 
 `)

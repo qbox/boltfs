@@ -1,11 +1,15 @@
 package qfusegate
 
 import (
+	"bytes"
 	"io"
+	"strings"
 	"sync"
+	"unsafe"
 
 	"bazil.org/fuse"
 	"golang.org/x/net/context"
+	"qiniupkg.com/x/rpc.v7"
 )
 
 // ---------------------------------------------------------------------------
@@ -137,6 +141,43 @@ func (p *Conn) serveRequest(r fuse.Request) {
 		r.RespondError(ENOSYS)
 	*/
 	r.RespondError(fuse.ENOSYS)
+}
+
+func replyError(r fuse.Request, err error) {
+
+	if e, ok := err.(*rpc.ErrorInfo); ok && e.Errno != 0 {
+		r.RespondError(fuse.Errno(e.Errno))
+	} else {
+		r.RespondError(err)
+	}
+}
+
+func toReader(p unsafe.Pointer, n uintptr) (r io.Reader) {
+
+	b := ((*[1<<30]byte)(p))[:n]
+	return bytes.NewReader(b)
+}
+
+// ---------------------------------------------------------------------------
+
+var (
+	stringReplacer = strings.NewReplacer("\\", "\\\\", "\n", "\\n")
+)
+
+type stringEncoder struct {
+	bytes.Buffer
+}
+
+func (p *stringEncoder) PutString(data string) {
+
+	stringReplacer.WriteString(&p.Buffer, data)
+	p.WriteByte('\n')
+}
+
+func (p *stringEncoder) PutBytes(data []byte) {
+
+	stringReplacer.WriteString(&p.Buffer, string(data))
+	p.WriteByte('\n')
 }
 
 // ---------------------------------------------------------------------------
