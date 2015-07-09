@@ -208,6 +208,30 @@ func nonFlatTypeOf(t reflect.Type) string {
 	panic("nonFlatTypeOf: unexpected")
 }
 
+func structAssign(prefix string, dest reflect.Type) {
+
+	n := dest.NumField()
+	for i := 0; i < n; i++ {
+		f := dest.Field(i)
+		src := ""
+		switch f.Name {
+		case "Inode":       src = "uint64(req.Node)"
+		case "OldInode":    src = "uint64(req.OldNode)"
+		case "NewDirInode": src = "uint64(req.NewDir)"
+		case "Handle":      src = "uint64(req.Handle)"
+		case "LookupReqid": src = "uint64(req.N)"
+		case "IntrReqId":   src = "uint64(req.IntrID)"
+		default:
+			if f.Type.String() == "qfuse.Time" {
+				src = fmt.Sprintf("Time(req.%s.UnixNano())", f.Name)
+			} else {
+				src = "req." + f.Name
+			}
+		}
+		fmt.Printf("%s%s: %s,\n", prefix, f.Name, src)
+	}
+}
+
 func gen(types []interface{}) {
 
 	req, resp := typeOf(types[0]), typeOf(types[2])
@@ -225,7 +249,9 @@ func gen(types []interface{}) {
 		fmt.Printf("\tresp, err := client.DoRequest(ctx, \"POST\", host + \"%s\")\n", reqPath)
 	} else {
 		argsName := req.Name()
-		fmt.Printf("\targs := &%s{}\n\t_ = args\n", argsName)
+		fmt.Printf("\targs := &%s{\n", argsName)
+		structAssign("\t\t", req)
+		fmt.Printf("\t}\n")
 		if isFlatType(req) {
 			fmt.Printf(`
 	n := unsafe.Sizeof(args)

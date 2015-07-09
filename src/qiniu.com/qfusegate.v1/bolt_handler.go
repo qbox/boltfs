@@ -17,8 +17,12 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &InitRequest{}
-	_ = args
+	args := &InitRequest{
+		Major: req.Major,
+		Minor: req.Minor,
+		MaxReadahead: req.MaxReadahead,
+		Flags: req.Flags,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -79,8 +83,10 @@ func handleAccessRequest(ctx Context, host string, req *fuse.AccessRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &AccessRequest{}
-	_ = args
+	args := &AccessRequest{
+		Inode: uint64(req.Node),
+		Mask: req.Mask,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -101,8 +107,9 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &GetattrRequest{}
-	_ = args
+	args := &GetattrRequest{
+		Inode: uint64(req.Node),
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -126,8 +133,11 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 
 	client := rpc.DefaultClient
 
-	args := &ListxattrRequest{}
-	_ = args
+	args := &ListxattrRequest{
+		Inode: uint64(req.Node),
+		Size: req.Size,
+		Position: req.Position,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -151,8 +161,12 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 
 	client := rpc.DefaultClient
 
-	args := &GetxattrRequest{}
-	_ = args
+	args := &GetxattrRequest{
+		Inode: uint64(req.Node),
+		Size: req.Size,
+		Position: req.Position,
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -178,8 +192,10 @@ func handleRemovexattrRequest(ctx Context, host string, req *fuse.RemovexattrReq
 
 	client := rpc.DefaultClient
 
-	args := &RemovexattrRequest{}
-	_ = args
+	args := &RemovexattrRequest{
+		Inode: uint64(req.Node),
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -202,8 +218,13 @@ func handleSetxattrRequest(ctx Context, host string, req *fuse.SetxattrRequest) 
 
 	client := rpc.DefaultClient
 
-	args := &SetxattrRequest{}
-	_ = args
+	args := &SetxattrRequest{
+		Inode: uint64(req.Node),
+		Flags: req.Flags,
+		Position: req.Position,
+		Name: req.Name,
+		Xattr: req.Xattr,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -231,8 +252,10 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &LookupRequest{}
-	_ = args
+	args := &LookupRequest{
+		Inode: uint64(req.Node),
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -258,8 +281,11 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &OpenRequest{}
-	_ = args
+	args := &OpenRequest{
+		Inode: uint64(req.Node),
+		Flags: req.Flags,
+		Dir: req.Dir,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -283,8 +309,12 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &CreateRequest{}
-	_ = args
+	args := &CreateRequest{
+		Inode: uint64(req.Node),
+		Flags: req.Flags,
+		Mode: req.Mode,
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -310,8 +340,11 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &MkdirRequest{}
-	_ = args
+	args := &MkdirRequest{
+		Inode: uint64(req.Node),
+		Mode: req.Mode,
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -337,8 +370,11 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &SymlinkRequest{}
-	_ = args
+	args := &SymlinkRequest{
+		Inode: uint64(req.Node),
+		NewName: req.NewName,
+		Target: req.Target,
+	}
 
 	n := unsafe.Offsetof(args.NewName)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -369,8 +405,9 @@ func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) 
 
 	client := rpc.DefaultClient
 
-	args := &ReadlinkRequest{}
-	_ = args
+	args := &ReadlinkRequest{
+		Inode: uint64(req.Node),
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -394,8 +431,11 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &LinkRequest{}
-	_ = args
+	args := &LinkRequest{
+		Inode: uint64(req.Node),
+		OldInode: uint64(req.OldNode),
+		NewName: req.NewName,
+	}
 
 	n := unsafe.Offsetof(args.NewName)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -421,8 +461,12 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &MknodRequest{}
-	_ = args
+	args := &MknodRequest{
+		Inode: uint64(req.Node),
+		Mode: req.Mode,
+		Rdev: req.Rdev,
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -448,8 +492,11 @@ func handleRenameRequest(ctx Context, host string, req *fuse.RenameRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &RenameRequest{}
-	_ = args
+	args := &RenameRequest{
+		NewDirInode: uint64(req.NewDir),
+		OldName: req.OldName,
+		NewName: req.NewName,
+	}
 
 	n := unsafe.Offsetof(args.OldName)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -477,8 +524,11 @@ func handleRemoveRequest(ctx Context, host string, req *fuse.RemoveRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &RemoveRequest{}
-	_ = args
+	args := &RemoveRequest{
+		Inode: uint64(req.Node),
+		Dir: req.Dir,
+		Name: req.Name,
+	}
 
 	n := unsafe.Offsetof(args.Name)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -501,8 +551,12 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &ReadRequest{}
-	_ = args
+	args := &ReadRequest{
+		Handle: uint64(req.Handle),
+		Offset: req.Offset,
+		Size: req.Size,
+		Dir: req.Dir,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -526,8 +580,12 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &WriteRequest{}
-	_ = args
+	args := &WriteRequest{
+		Handle: uint64(req.Handle),
+		Offset: req.Offset,
+		Flags: req.Flags,
+		Data: req.Data,
+	}
 
 	n := unsafe.Offsetof(args.Data)
 	body1 := toReader(unsafe.Pointer(&args), n)
@@ -553,8 +611,20 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &SetattrRequest{}
-	_ = args
+	args := &SetattrRequest{
+		Valid: req.Valid,
+		Handle: uint64(req.Handle),
+		Size: req.Size,
+		Atime: Time(req.Atime.UnixNano()),
+		Mtime: Time(req.Mtime.UnixNano()),
+		Mode: req.Mode,
+		Uid: req.Uid,
+		Gid: req.Gid,
+		Bkuptime: Time(req.Bkuptime.UnixNano()),
+		Chgtime: Time(req.Chgtime.UnixNano()),
+		Crtime: Time(req.Crtime.UnixNano()),
+		Flags: req.Flags,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -578,8 +648,11 @@ func handleFlushRequest(ctx Context, host string, req *fuse.FlushRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &FlushRequest{}
-	_ = args
+	args := &FlushRequest{
+		Handle: uint64(req.Handle),
+		LockOwner: req.LockOwner,
+		Flags: req.Flags,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -600,8 +673,11 @@ func handleFsyncRequest(ctx Context, host string, req *fuse.FsyncRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &FsyncRequest{}
-	_ = args
+	args := &FsyncRequest{
+		Handle: uint64(req.Handle),
+		Flags: req.Flags,
+		Dir: req.Dir,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -622,8 +698,13 @@ func handleReleaseRequest(ctx Context, host string, req *fuse.ReleaseRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &ReleaseRequest{}
-	_ = args
+	args := &ReleaseRequest{
+		Handle: uint64(req.Handle),
+		Flags: req.Flags,
+		ReleaseFlags: req.ReleaseFlags,
+		LockOwner: req.LockOwner,
+		Dir: req.Dir,
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -644,8 +725,10 @@ func handleForgetRequest(ctx Context, host string, req *fuse.ForgetRequest) {
 
 	client := rpc.DefaultClient
 
-	args := &ForgetRequest{}
-	_ = args
+	args := &ForgetRequest{
+		Inode: uint64(req.Node),
+		LookupReqid: uint64(req.N),
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
@@ -666,8 +749,9 @@ func handleInterruptRequest(ctx Context, host string, req *fuse.InterruptRequest
 
 	client := rpc.DefaultClient
 
-	args := &InterruptRequest{}
-	_ = args
+	args := &InterruptRequest{
+		IntrReqId: uint64(req.IntrID),
+	}
 
 	n := unsafe.Sizeof(args)
 	body := toReader(unsafe.Pointer(&args), n)
