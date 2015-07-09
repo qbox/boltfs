@@ -39,7 +39,11 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 	ret := &InitResponse{}
 	_ = ret
 
-	req.Respond(&fuse.InitResponse{})
+	fuseResp := new(fuse.InitResponse)
+	fuseResp.MaxReadahead = ret.MaxReadahead
+	fuseResp.Flags = ret.Flags
+	fuseResp.MaxWrite = ret.MaxWrite
+	req.Respond(fuseResp)
 }
 
 func handleDestroyRequest(ctx Context, host string, req *fuse.DestroyRequest) {
@@ -76,7 +80,16 @@ func handleStatfsRequest(ctx Context, host string, req *fuse.StatfsRequest) {
 	ret := &StatfsResponse{}
 	_ = ret
 
-	req.Respond(&fuse.StatfsResponse{})
+	fuseResp := new(fuse.StatfsResponse)
+	fuseResp.Blocks = ret.Blocks
+	fuseResp.Bfree = ret.Bfree
+	fuseResp.Bavail = ret.Bavail
+	fuseResp.Files = ret.Files
+	fuseResp.Ffree = ret.Ffree
+	fuseResp.Bsize = ret.Bsize
+	fuseResp.Namelen = ret.Namelen
+	fuseResp.Frsize = ret.Frsize
+	req.Respond(fuseResp)
 }
 
 func handleAccessRequest(ctx Context, host string, req *fuse.AccessRequest) {
@@ -126,7 +139,9 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 	ret := &GetattrResponse{}
 	_ = ret
 
-	req.Respond(&fuse.GetattrResponse{})
+	fuseResp := new(fuse.GetattrResponse)
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest) {
@@ -154,7 +169,9 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 	ret := &ListxattrResponse{}
 	_ = ret
 
-	req.Respond(&fuse.ListxattrResponse{})
+	fuseResp := new(fuse.ListxattrResponse)
+	fuseResp.Xattr = ret.XattrNames
+	req.Respond(fuseResp)
 }
 
 func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) {
@@ -185,7 +202,9 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 	ret := &GetxattrResponse{}
 	_ = ret
 
-	req.Respond(&fuse.GetxattrResponse{})
+	fuseResp := new(fuse.GetxattrResponse)
+	fuseResp.Xattr = ret.Xattr
+	req.Respond(fuseResp)
 }
 
 func handleRemovexattrRequest(ctx Context, host string, req *fuse.RemovexattrRequest) {
@@ -274,7 +293,12 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 	ret := &LookupResponse{}
 	_ = ret
 
-	req.Respond(&fuse.LookupResponse{})
+	fuseResp := new(fuse.LookupResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
@@ -302,7 +326,10 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 	ret := &OpenResponse{}
 	_ = ret
 
-	req.Respond(&fuse.OpenResponse{})
+	fuseResp := new(fuse.OpenResponse)
+	fuseResp.Handle = fuse.HandleID(ret.Handle)
+	fuseResp.Flags = ret.Flags
+	req.Respond(fuseResp)
 }
 
 func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
@@ -333,7 +360,14 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 	ret := &CreateResponse{}
 	_ = ret
 
-	req.Respond(&fuse.CreateResponse{})
+	fuseResp := new(fuse.CreateResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	fuseResp.Handle = fuse.HandleID(ret.Handle)
+	fuseResp.Flags = ret.Flags
+	req.Respond(fuseResp)
 }
 
 func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
@@ -363,7 +397,12 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 	ret := &MkdirResponse{}
 	_ = ret
 
-	req.Respond(&fuse.MkdirResponse{})
+	fuseResp := new(fuse.MkdirResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
@@ -398,7 +437,12 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 	ret := &SymlinkResponse{}
 	_ = ret
 
-	req.Respond(&fuse.SymlinkResponse{})
+	fuseResp := new(fuse.SymlinkResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) {
@@ -454,7 +498,12 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 	ret := &LinkResponse{}
 	_ = ret
 
-	req.Respond(&fuse.LookupResponse{})
+	fuseResp := new(fuse.LookupResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
@@ -485,7 +534,12 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 	ret := &MknodResponse{}
 	_ = ret
 
-	req.Respond(&fuse.LookupResponse{})
+	fuseResp := new(fuse.LookupResponse)
+	fuseResp.Node = fuse.NodeID(ret.Inode)
+	fuseResp.Generation = ret.Generation
+	fuseResp.EntryValid = ret.EntryValid
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleRenameRequest(ctx Context, host string, req *fuse.RenameRequest) {
@@ -573,7 +627,9 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 	ret := &ReadResponse{}
 	_ = ret
 
-	req.Respond(&fuse.ReadResponse{})
+	fuseResp := new(fuse.ReadResponse)
+	fuseResp.Data = ret.Data
+	req.Respond(fuseResp)
 }
 
 func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
@@ -604,7 +660,9 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 	ret := &WriteResponse{}
 	_ = ret
 
-	req.Respond(&fuse.WriteResponse{})
+	fuseResp := new(fuse.WriteResponse)
+	fuseResp.Size = ret.Size
+	req.Respond(fuseResp)
 }
 
 func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
@@ -641,7 +699,9 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 	ret := &SetattrResponse{}
 	_ = ret
 
-	req.Respond(&fuse.SetattrResponse{})
+	fuseResp := new(fuse.SetattrResponse)
+	fuseResp.Attr = ret.Attr
+	req.Respond(fuseResp)
 }
 
 func handleFlushRequest(ctx Context, host string, req *fuse.FlushRequest) {

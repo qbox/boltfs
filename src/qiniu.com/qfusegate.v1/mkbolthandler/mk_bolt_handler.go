@@ -208,7 +208,7 @@ func nonFlatTypeOf(t reflect.Type) string {
 	panic("nonFlatTypeOf: unexpected")
 }
 
-func requestAssign(prefix string, dest reflect.Type) {
+func requestAssign(dest reflect.Type) {
 
 	n := dest.NumField()
 	for i := 0; i < n; i++ {
@@ -228,21 +228,26 @@ func requestAssign(prefix string, dest reflect.Type) {
 				src = "req." + f.Name
 			}
 		}
-		fmt.Printf("%s%s: %s,\n", prefix, f.Name, src)
+		fmt.Printf("\t\t%s: %s,\n", f.Name, src)
 	}
 }
 
-func responseAssign(prefix string, srcType reflect.Type) {
+func responseAssign(srcType reflect.Type) {
 
 	n := srcType.NumField()
 	for i := 0; i < n; i++ {
 		f := srcType.Field(i)
-		src := ""
-		switch f.Name {
-		default:
-			src = "ret." + f.Name
+		if f.Anonymous {
+			responseAssign(f.Type)
+			continue
 		}
-		fmt.Printf("%s%s: %s,\n", prefix, f.Name, src)
+		src, destName := "ret." + f.Name, f.Name
+		switch f.Name {
+		case "Inode":      destName, src = "Node", "fuse.NodeID(ret.Inode)"
+		case "Handle":     src = "fuse.HandleID(ret.Handle)"
+		case "XattrNames": destName = "Xattr"
+		}
+		fmt.Printf("\tfuseResp.%s = %s\n", destName, src)
 	}
 }
 
@@ -264,7 +269,7 @@ func gen(types []interface{}) {
 	} else {
 		argsName := req.Name()
 		fmt.Printf("\targs := &%s{\n", argsName)
-		requestAssign("\t\t", req)
+		requestAssign(req)
 		fmt.Printf("\t}\n")
 		if isFlatType(req) {
 			fmt.Printf(`
@@ -336,8 +341,7 @@ func gen(types []interface{}) {
 	}
 
 	retName := resp.Name()
-	fmt.Printf("\tret := &%s{", retName)
-	fmt.Printf("\t}\n")
+	fmt.Printf("\tret := &%s{}\n\t_ = ret\n\n", retName)
 
 	if fuseResp.Kind() == reflect.String {
 		fmt.Printf("\treq.Respond(ret.Target)\n}\n\n")
@@ -345,7 +349,9 @@ func gen(types []interface{}) {
 	}
 
 	respName := fuseResp.Name()
-	fmt.Printf("\treq.Respond(&fuse.%s{})\n}\n\n", respName)
+	fmt.Printf("\tfuseResp := new(fuse.%s)\n", respName)
+	responseAssign(resp)
+	fmt.Printf("\treq.Respond(fuseResp)\n}\n\n")
 }
 
 func typeOf(v interface{}) reflect.Type {
