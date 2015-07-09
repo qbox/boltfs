@@ -3,6 +3,7 @@ package qfusegate
 import (
 	"bytes"
 	"io"
+	"strings"
 	"sync"
 	"unsafe"
 
