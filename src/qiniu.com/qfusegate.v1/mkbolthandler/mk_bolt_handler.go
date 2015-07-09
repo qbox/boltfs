@@ -241,6 +241,10 @@ func responseAssign(srcType reflect.Type) {
 			responseAssign(f.Type)
 			continue
 		}
+		if f.Name == "Attr" {
+			fmt.Printf("\tassignAttr(&fuseResp.Attr, &ret.Attr)\n")
+			continue
+		}
 		src, destName := "ret." + f.Name, f.Name
 		switch f.Name {
 		case "Inode":      destName, src = "Node", "fuse.NodeID(ret.Inode)"
@@ -273,8 +277,8 @@ func gen(types []interface{}) {
 		fmt.Printf("\t}\n")
 		if isFlatType(req) {
 			fmt.Printf(`
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "%s", "application/fuse", body, int(n))
 `, reqPath)
 		} else {
@@ -288,7 +292,7 @@ func gen(types []interface{}) {
 			} else if info.Count == 1 && info.Offset != 0 {
 				fmt.Printf(`
 	n := unsafe.Offsetof(args.%s)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, %s.NewReader(args.%s))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "%s", "application/fuse", body, int(n)+len(args.%s))
@@ -296,7 +300,7 @@ func gen(types []interface{}) {
 			} else {
 				fmt.Printf(`
 	n := unsafe.Offsetof(args.%s)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 
 	var encoder stringEncoder
 `, info.Name)
@@ -312,7 +316,7 @@ func gen(types []interface{}) {
 `	encoder.PutBytes(args.%s)
 `, f.Name)
 					default:
-						println("type:", req.String())
+						println("req.type:", req.String())
 						panic("field must be string or []byte")
 					}
 				}
@@ -341,7 +345,45 @@ func gen(types []interface{}) {
 	}
 
 	retName := resp.Name()
-	fmt.Printf("\tret := &%s{}\n\t_ = ret\n\n", retName)
+	fmt.Printf("\tret := new(%s)\n", retName)
+	if isFlatType(resp) {
+		fmt.Printf(
+`	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+`)
+	} else {
+		info := nonFlatTypeInfoOf(resp)
+		if info.Count > 1 {
+			println("resp.type:", resp.String())
+			panic("unexpected resp.type")
+		}
+		if info.Offset == 0 && info.Type == "strings" {
+			fmt.Printf(
+`	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.%s = string(b)
+`, info.Name)
+		} else if info.Offset == 0 && info.Type == "bytes" {
+			fmt.Printf(
+`	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.%s = b
+`, info.Name)
+		} else {
+			fmt.Printf(`
+	body1 := fromReaderEx(unsafe.Pointer(ret), unsafe.Offsetof(ret.%s), &ret.%s, resp.Body)
+`, info.Name, info.Name)
+		}
+	}
 
 	if fuseResp.Kind() == reflect.String {
 		fmt.Printf("\treq.Respond(ret.Target)\n}\n\n")

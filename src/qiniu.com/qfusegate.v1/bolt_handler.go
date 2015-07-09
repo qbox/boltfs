@@ -24,8 +24,8 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 		Flags: req.Flags,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/init", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -36,9 +36,12 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &InitResponse{}
-	_ = ret
-
+	ret := new(InitResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.InitResponse)
 	fuseResp.MaxReadahead = ret.MaxReadahead
 	fuseResp.Flags = ret.Flags
@@ -77,9 +80,12 @@ func handleStatfsRequest(ctx Context, host string, req *fuse.StatfsRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &StatfsResponse{}
-	_ = ret
-
+	ret := new(StatfsResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.StatfsResponse)
 	fuseResp.Blocks = ret.Blocks
 	fuseResp.Bfree = ret.Bfree
@@ -101,8 +107,8 @@ func handleAccessRequest(ctx Context, host string, req *fuse.AccessRequest) {
 		Mask: req.Mask,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/access", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -124,8 +130,8 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 		Inode: uint64(req.Node),
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/getattr", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -136,11 +142,14 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &GetattrResponse{}
-	_ = ret
-
+	ret := new(GetattrResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.GetattrResponse)
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -154,8 +163,8 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 		Position: req.Position,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/listxattr", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -166,9 +175,13 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 		resp.Body.Close()
 	}()
 
-	ret := &ListxattrResponse{}
-	_ = ret
-
+	ret := new(ListxattrResponse)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.XattrNames = b
 	fuseResp := new(fuse.ListxattrResponse)
 	fuseResp.Xattr = ret.XattrNames
 	req.Respond(fuseResp)
@@ -186,7 +199,7 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/getxattr", "application/fuse", body, int(n)+len(args.Name))
@@ -199,9 +212,13 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 		resp.Body.Close()
 	}()
 
-	ret := &GetxattrResponse{}
-	_ = ret
-
+	ret := new(GetxattrResponse)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.Xattr = b
 	fuseResp := new(fuse.GetxattrResponse)
 	fuseResp.Xattr = ret.Xattr
 	req.Respond(fuseResp)
@@ -217,7 +234,7 @@ func handleRemovexattrRequest(ctx Context, host string, req *fuse.RemovexattrReq
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/removexattr", "application/fuse", body, int(n)+len(args.Name))
@@ -246,7 +263,7 @@ func handleSetxattrRequest(ctx Context, host string, req *fuse.SetxattrRequest) 
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 
 	var encoder stringEncoder
 	encoder.PutString(args.Name)
@@ -277,7 +294,7 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/lookup", "application/fuse", body, int(n)+len(args.Name))
@@ -290,14 +307,17 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &LookupResponse{}
-	_ = ret
-
+	ret := new(LookupResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -311,8 +331,8 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 		Dir: req.Dir,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/open", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -323,9 +343,12 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &OpenResponse{}
-	_ = ret
-
+	ret := new(OpenResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.OpenResponse)
 	fuseResp.Handle = fuse.HandleID(ret.Handle)
 	fuseResp.Flags = ret.Flags
@@ -344,7 +367,7 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/create", "application/fuse", body, int(n)+len(args.Name))
@@ -357,14 +380,17 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &CreateResponse{}
-	_ = ret
-
+	ret := new(CreateResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.CreateResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	fuseResp.Handle = fuse.HandleID(ret.Handle)
 	fuseResp.Flags = ret.Flags
 	req.Respond(fuseResp)
@@ -381,7 +407,7 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/mkdir", "application/fuse", body, int(n)+len(args.Name))
@@ -394,14 +420,17 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &MkdirResponse{}
-	_ = ret
-
+	ret := new(MkdirResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.MkdirResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -416,7 +445,7 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 	}
 
 	n := unsafe.Offsetof(args.NewName)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 
 	var encoder stringEncoder
 	encoder.PutString(args.NewName)
@@ -434,14 +463,17 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &SymlinkResponse{}
-	_ = ret
-
+	ret := new(SymlinkResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.SymlinkResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -453,8 +485,8 @@ func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) 
 		Inode: uint64(req.Node),
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/readlink", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -465,9 +497,13 @@ func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) 
 		resp.Body.Close()
 	}()
 
-	ret := &ReadlinkResponse{}
-	_ = ret
-
+	ret := new(ReadlinkResponse)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.Target = string(b)
 	req.Respond(ret.Target)
 }
 
@@ -482,7 +518,7 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 	}
 
 	n := unsafe.Offsetof(args.NewName)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.NewName))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/link", "application/fuse", body, int(n)+len(args.NewName))
@@ -495,14 +531,17 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &LinkResponse{}
-	_ = ret
-
+	ret := new(LinkResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -518,7 +557,7 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/mknod", "application/fuse", body, int(n)+len(args.Name))
@@ -531,14 +570,17 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &MknodResponse{}
-	_ = ret
-
+	ret := new(MknodResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
 	fuseResp.EntryValid = ret.EntryValid
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -553,7 +595,7 @@ func handleRenameRequest(ctx Context, host string, req *fuse.RenameRequest) {
 	}
 
 	n := unsafe.Offsetof(args.OldName)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 
 	var encoder stringEncoder
 	encoder.PutString(args.OldName)
@@ -585,7 +627,7 @@ func handleRemoveRequest(ctx Context, host string, req *fuse.RemoveRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Name)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, strings.NewReader(args.Name))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/remove", "application/fuse", body, int(n)+len(args.Name))
@@ -612,8 +654,8 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 		Dir: req.Dir,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/read", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -624,9 +666,13 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &ReadResponse{}
-	_ = ret
-
+	ret := new(ReadResponse)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
+	ret.Data = b
 	fuseResp := new(fuse.ReadResponse)
 	fuseResp.Data = ret.Data
 	req.Respond(fuseResp)
@@ -644,7 +690,7 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 	}
 
 	n := unsafe.Offsetof(args.Data)
-	body1 := toReader(unsafe.Pointer(&args), n)
+	body1 := toReader(unsafe.Pointer(args), n)
 	body := io.MultiReader(body1, bytes.NewReader(args.Data))
 	resp, err := client.DoRequestWith(
 		ctx, "POST", host + "/v1/write", "application/fuse", body, int(n)+len(args.Data))
@@ -657,9 +703,12 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &WriteResponse{}
-	_ = ret
-
+	ret := new(WriteResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.WriteResponse)
 	fuseResp.Size = ret.Size
 	req.Respond(fuseResp)
@@ -684,8 +733,8 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 		Flags: req.Flags,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/setattr", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -696,11 +745,14 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 		resp.Body.Close()
 	}()
 
-	ret := &SetattrResponse{}
-	_ = ret
-
+	ret := new(SetattrResponse)
+	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
+	if err != nil {
+		replyError(req, err)
+		return
+	}
 	fuseResp := new(fuse.SetattrResponse)
-	fuseResp.Attr = ret.Attr
+	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
 }
 
@@ -714,8 +766,8 @@ func handleFlushRequest(ctx Context, host string, req *fuse.FlushRequest) {
 		Flags: req.Flags,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/flush", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -739,8 +791,8 @@ func handleFsyncRequest(ctx Context, host string, req *fuse.FsyncRequest) {
 		Dir: req.Dir,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/fsync", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -766,8 +818,8 @@ func handleReleaseRequest(ctx Context, host string, req *fuse.ReleaseRequest) {
 		Dir: req.Dir,
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/release", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -790,8 +842,8 @@ func handleForgetRequest(ctx Context, host string, req *fuse.ForgetRequest) {
 		LookupReqid: uint64(req.N),
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/forget", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)
@@ -813,8 +865,8 @@ func handleInterruptRequest(ctx Context, host string, req *fuse.InterruptRequest
 		IntrReqId: uint64(req.IntrID),
 	}
 
-	n := unsafe.Sizeof(args)
-	body := toReader(unsafe.Pointer(&args), n)
+	n := unsafe.Sizeof(*args)
+	body := toReader(unsafe.Pointer(args), n)
 	resp, err := client.DoRequestWith(ctx, "POST", host + "/v1/interrupt", "application/fuse", body, int(n))
 	if err != nil {
 		replyError(req, err)

@@ -3,13 +3,17 @@ package qfusegate
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"bazil.org/fuse"
 	"golang.org/x/net/context"
 	"qiniupkg.com/x/rpc.v7"
+
+	. "qiniu.com/qfuse.proto.v1"
 )
 
 // ---------------------------------------------------------------------------
@@ -158,6 +162,35 @@ func toReader(p unsafe.Pointer, n uintptr) (r io.Reader) {
 	return bytes.NewReader(b)
 }
 
+func fromReader(p unsafe.Pointer, n uintptr, r io.Reader) (err error) {
+
+	b := ((*[1<<30]byte)(p))[:n]
+	_, err = io.ReadFull(r, b)
+	return
+}
+
+func fromReaderEx(p unsafe.Pointer, n uintptr, ret interface{}, r io.Reader) (err error) {
+
+	b := ((*[1<<30]byte)(p))[:n]
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return
+	}
+	data, err := ioutil.ReadAll(r)
+	if err != nil {
+		return
+	}
+	switch ret := ret.(type) {
+	case *string:
+		*ret = string(data)
+	case *[]byte:
+		*ret = data
+	default:
+		panic("fromReaderEx: unexpected")
+	}
+	return
+}
+
 // ---------------------------------------------------------------------------
 
 var (
@@ -178,6 +211,26 @@ func (p *stringEncoder) PutBytes(data []byte) {
 
 	stringReplacer.WriteString(&p.Buffer, string(data))
 	p.WriteByte('\n')
+}
+
+// ---------------------------------------------------------------------------
+
+func assignAttr(dest *fuse.Attr, src *Attr) {
+
+	dest.Valid = src.Valid
+	dest.Inode = src.Inode
+	dest.Size = src.Size
+	dest.Blocks = src.Blocks
+	dest.Atime = time.Unix(0, int64(src.Atime))
+	dest.Mtime = time.Unix(0, int64(src.Mtime))
+	dest.Ctime = time.Unix(0, int64(src.Ctime))
+	dest.Crtime = time.Unix(0, int64(src.Crtime))
+	dest.Mode = src.Mode
+	dest.Nlink = src.Nlink
+	dest.Uid = src.Uid
+	dest.Gid = src.Gid
+	dest.Rdev = src.Rdev
+	dest.Flags = src.Flags
 }
 
 // ---------------------------------------------------------------------------
