@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"qiniupkg.com/x/rpc.v7"
 	"strings"
 	"unsafe"
 
@@ -15,7 +14,7 @@ import (
 
 func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &InitRequest{
 		Major: req.Major,
@@ -36,12 +35,18 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(InitResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.InitResponse)
 	fuseResp.MaxReadahead = ret.MaxReadahead
 	fuseResp.Flags = ret.Flags
@@ -51,7 +56,7 @@ func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {
 
 func handleDestroyRequest(ctx Context, host string, req *fuse.DestroyRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	resp, err := client.DoRequest(ctx, "POST", host + "/v1/destroy")
 	if err != nil {
@@ -63,12 +68,17 @@ func handleDestroyRequest(ctx Context, host string, req *fuse.DestroyRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleStatfsRequest(ctx Context, host string, req *fuse.StatfsRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	resp, err := client.DoRequest(ctx, "POST", host + "/v1/statfs")
 	if err != nil {
@@ -80,12 +90,18 @@ func handleStatfsRequest(ctx Context, host string, req *fuse.StatfsRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(StatfsResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.StatfsResponse)
 	fuseResp.Blocks = ret.Blocks
 	fuseResp.Bfree = ret.Bfree
@@ -100,7 +116,7 @@ func handleStatfsRequest(ctx Context, host string, req *fuse.StatfsRequest) {
 
 func handleAccessRequest(ctx Context, host string, req *fuse.AccessRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &AccessRequest{
 		Inode: uint64(req.Node),
@@ -119,12 +135,17 @@ func handleAccessRequest(ctx Context, host string, req *fuse.AccessRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &GetattrRequest{
 		Inode: uint64(req.Node),
@@ -142,12 +163,18 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(GetattrResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.GetattrResponse)
 	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
@@ -155,7 +182,7 @@ func handleGetattrRequest(ctx Context, host string, req *fuse.GetattrRequest) {
 
 func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &ListxattrRequest{
 		Inode: uint64(req.Node),
@@ -175,6 +202,11 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(ListxattrResponse)
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -182,6 +214,7 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 		return
 	}
 	ret.XattrNames = b
+
 	fuseResp := new(fuse.ListxattrResponse)
 	fuseResp.Xattr = ret.XattrNames
 	req.Respond(fuseResp)
@@ -189,7 +222,7 @@ func handleListxattrRequest(ctx Context, host string, req *fuse.ListxattrRequest
 
 func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &GetxattrRequest{
 		Inode: uint64(req.Node),
@@ -212,6 +245,11 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(GetxattrResponse)
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -219,6 +257,7 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 		return
 	}
 	ret.Xattr = b
+
 	fuseResp := new(fuse.GetxattrResponse)
 	fuseResp.Xattr = ret.Xattr
 	req.Respond(fuseResp)
@@ -226,7 +265,7 @@ func handleGetxattrRequest(ctx Context, host string, req *fuse.GetxattrRequest) 
 
 func handleRemovexattrRequest(ctx Context, host string, req *fuse.RemovexattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &RemovexattrRequest{
 		Inode: uint64(req.Node),
@@ -247,12 +286,17 @@ func handleRemovexattrRequest(ctx Context, host string, req *fuse.RemovexattrReq
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleSetxattrRequest(ctx Context, host string, req *fuse.SetxattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &SetxattrRequest{
 		Inode: uint64(req.Node),
@@ -281,12 +325,17 @@ func handleSetxattrRequest(ctx Context, host string, req *fuse.SetxattrRequest) 
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &LookupRequest{
 		Inode: uint64(req.Node),
@@ -307,12 +356,18 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(LookupResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -323,7 +378,7 @@ func handleLookupRequest(ctx Context, host string, req *fuse.LookupRequest) {
 
 func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &OpenRequest{
 		Inode: uint64(req.Node),
@@ -343,12 +398,18 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(OpenResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.OpenResponse)
 	fuseResp.Handle = fuse.HandleID(ret.Handle)
 	fuseResp.Flags = ret.Flags
@@ -357,7 +418,7 @@ func handleOpenRequest(ctx Context, host string, req *fuse.OpenRequest) {
 
 func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &CreateRequest{
 		Inode: uint64(req.Node),
@@ -380,12 +441,18 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(CreateResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.CreateResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -398,7 +465,7 @@ func handleCreateRequest(ctx Context, host string, req *fuse.CreateRequest) {
 
 func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &MkdirRequest{
 		Inode: uint64(req.Node),
@@ -420,12 +487,18 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(MkdirResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.MkdirResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -436,7 +509,7 @@ func handleMkdirRequest(ctx Context, host string, req *fuse.MkdirRequest) {
 
 func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &SymlinkRequest{
 		Inode: uint64(req.Node),
@@ -463,12 +536,18 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(SymlinkResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.SymlinkResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -479,7 +558,7 @@ func handleSymlinkRequest(ctx Context, host string, req *fuse.SymlinkRequest) {
 
 func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &ReadlinkRequest{
 		Inode: uint64(req.Node),
@@ -497,6 +576,11 @@ func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) 
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(ReadlinkResponse)
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -509,7 +593,7 @@ func handleReadlinkRequest(ctx Context, host string, req *fuse.ReadlinkRequest) 
 
 func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &LinkRequest{
 		Inode: uint64(req.Node),
@@ -531,12 +615,18 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(LinkResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -547,7 +637,7 @@ func handleLinkRequest(ctx Context, host string, req *fuse.LinkRequest) {
 
 func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &MknodRequest{
 		Inode: uint64(req.Node),
@@ -570,12 +660,18 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(MknodResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.LookupResponse)
 	fuseResp.Node = fuse.NodeID(ret.Inode)
 	fuseResp.Generation = ret.Generation
@@ -586,7 +682,7 @@ func handleMknodRequest(ctx Context, host string, req *fuse.MknodRequest) {
 
 func handleRenameRequest(ctx Context, host string, req *fuse.RenameRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &RenameRequest{
 		NewDirInode: uint64(req.NewDir),
@@ -613,12 +709,17 @@ func handleRenameRequest(ctx Context, host string, req *fuse.RenameRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleRemoveRequest(ctx Context, host string, req *fuse.RemoveRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &RemoveRequest{
 		Inode: uint64(req.Node),
@@ -640,12 +741,17 @@ func handleRemoveRequest(ctx Context, host string, req *fuse.RemoveRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &ReadRequest{
 		Handle: uint64(req.Handle),
@@ -666,6 +772,11 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(ReadResponse)
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -673,6 +784,7 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 		return
 	}
 	ret.Data = b
+
 	fuseResp := new(fuse.ReadResponse)
 	fuseResp.Data = ret.Data
 	req.Respond(fuseResp)
@@ -680,7 +792,7 @@ func handleReadRequest(ctx Context, host string, req *fuse.ReadRequest) {
 
 func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &WriteRequest{
 		Handle: uint64(req.Handle),
@@ -703,12 +815,18 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(WriteResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.WriteResponse)
 	fuseResp.Size = ret.Size
 	req.Respond(fuseResp)
@@ -716,7 +834,7 @@ func handleWriteRequest(ctx Context, host string, req *fuse.WriteRequest) {
 
 func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &SetattrRequest{
 		Valid: req.Valid,
@@ -745,12 +863,18 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	ret := new(SetattrResponse)
 	err = fromReader(unsafe.Pointer(ret), unsafe.Sizeof(*ret), resp.Body)
 	if err != nil {
 		replyError(req, err)
 		return
 	}
+
 	fuseResp := new(fuse.SetattrResponse)
 	assignAttr(&fuseResp.Attr, &ret.Attr)
 	req.Respond(fuseResp)
@@ -758,7 +882,7 @@ func handleSetattrRequest(ctx Context, host string, req *fuse.SetattrRequest) {
 
 func handleFlushRequest(ctx Context, host string, req *fuse.FlushRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &FlushRequest{
 		Handle: uint64(req.Handle),
@@ -778,12 +902,17 @@ func handleFlushRequest(ctx Context, host string, req *fuse.FlushRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleFsyncRequest(ctx Context, host string, req *fuse.FsyncRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &FsyncRequest{
 		Handle: uint64(req.Handle),
@@ -803,12 +932,17 @@ func handleFsyncRequest(ctx Context, host string, req *fuse.FsyncRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleReleaseRequest(ctx Context, host string, req *fuse.ReleaseRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &ReleaseRequest{
 		Handle: uint64(req.Handle),
@@ -830,12 +964,17 @@ func handleReleaseRequest(ctx Context, host string, req *fuse.ReleaseRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleForgetRequest(ctx Context, host string, req *fuse.ForgetRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &ForgetRequest{
 		Inode: uint64(req.Node),
@@ -854,12 +993,17 @@ func handleForgetRequest(ctx Context, host string, req *fuse.ForgetRequest) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 	req.Respond()
 }
 
 func handleInterruptRequest(ctx Context, host string, req *fuse.InterruptRequest) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 	args := &InterruptRequest{
 		IntrReqId: uint64(req.IntrID),
@@ -876,6 +1020,11 @@ func handleInterruptRequest(ctx Context, host string, req *fuse.InterruptRequest
 		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}()
+
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
 
 	req.Respond()
 }

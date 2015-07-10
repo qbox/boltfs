@@ -264,7 +264,7 @@ func gen(types []interface{}) {
 	reqPath := "/v1/" + strings.ToLower(strings.TrimSuffix(reqName, "Request"))
 	fmt.Printf(`func handle%s(ctx Context, host string, req *fuse.%s) {
 
-	client := rpc.DefaultClient
+	client := newBoltClient(&req.Header, nil)
 
 `, reqName, reqName)
 
@@ -337,6 +337,11 @@ func gen(types []interface{}) {
 		resp.Body.Close()
 	}()
 
+	if resp.StatusCode != 200 {
+		respondError(req, resp.Body)
+		return
+	}
+
 `)
 
 	if resp == nil {
@@ -391,7 +396,7 @@ func gen(types []interface{}) {
 	}
 
 	respName := fuseResp.Name()
-	fmt.Printf("\tfuseResp := new(fuse.%s)\n", respName)
+	fmt.Printf("\n\tfuseResp := new(fuse.%s)\n", respName)
 	responseAssign(resp)
 	fmt.Printf("\treq.Respond(fuseResp)\n}\n\n")
 }
@@ -418,7 +423,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"qiniupkg.com/x/rpc.v7"
 	"strings"
 	"unsafe"
 

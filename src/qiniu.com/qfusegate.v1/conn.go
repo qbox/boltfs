@@ -2,8 +2,12 @@ package qfusegate
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -156,6 +160,17 @@ func replyError(r fuse.Request, err error) {
 	}
 }
 
+func respondError(r fuse.Request, resp io.Reader) {
+
+	var errno int32
+	err := fromReader(unsafe.Pointer(&errno), 4, resp)
+	if err != nil {
+		r.RespondError(err)
+	} else {
+		r.RespondError(fuse.Errno(errno))
+	}
+}
+
 func toReader(p unsafe.Pointer, n uintptr) (r io.Reader) {
 
 	b := ((*[1<<30]byte)(p))[:n]
@@ -231,6 +246,46 @@ func assignAttr(dest *fuse.Attr, src *Attr) {
 	dest.Gid = src.Gid
 	dest.Rdev = src.Rdev
 	dest.Flags = src.Flags
+}
+
+// ---------------------------------------------------------------------------
+
+type transportImpl struct {
+	auth  string
+	reqid string
+	base  http.RoundTripper
+}
+
+// Authorization: QBolt base64(<Uid/Gid/Pid:uint32>)
+// X-Reqid: <Reqid:uint64>
+//
+func newBoltTransport(req *fuse.Header, base http.RoundTripper) *transportImpl {
+
+	var b [12]byte
+	binary.LittleEndian.PutUint32(b[:], req.Uid)
+	binary.LittleEndian.PutUint32(b[4:], req.Gid)
+	binary.LittleEndian.PutUint32(b[8:], req.Pid)
+	auth := "QBolt " + base64.URLEncoding.EncodeToString(b[:])
+
+	reqid := strconv.FormatUint(uint64(req.ID), 36)
+
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return &transportImpl{auth: auth, reqid: reqid, base: base}
+}
+
+func newBoltClient(req *fuse.Header, base http.RoundTripper) rpc.Client {
+
+	tr := newBoltTransport(req, base)
+	return rpc.Client{&http.Client{Transport: tr}}
+}
+
+func (p *transportImpl) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+
+	req.Header.Set("Authorization", p.auth)
+	req.Header.Set("X-Reqid", p.reqid)
+	return p.base.RoundTrip(req)
 }
 
 // ---------------------------------------------------------------------------
