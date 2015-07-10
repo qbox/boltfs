@@ -1,4 +1,4 @@
-QFUSE 网络协议
+QBOLT 网络协议
 ==============
 
 # 约定
@@ -6,8 +6,8 @@ QFUSE 网络协议
 ## 请求通用头
 
 ```
-Authorization: QFuse base64(<Uid/Gid/Pid:uint32>)
-X-Reqid: <Reqid:uint64>
+Authorization: QBolt base64(<Uid/Gid/Pid:uint32>)
+X-Reqid: base36(<Reqid:uint64>)
 ```
 
 ## 出错返回包

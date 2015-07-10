@@ -1,4 +1,4 @@
-package qfuse
+package boltfs
 
 import (
 	"bazil.org/fuse"
@@ -7,6 +7,24 @@ import (
 )
 
 type Time int64
+
+type Attr struct {
+	Valid time.Duration // how long Attr can be cached
+
+	Inode  uint64      // inode number
+	Size   uint64      // size in bytes
+	Blocks uint64      // size in blocks
+	Atime  Time        // time of last access
+	Mtime  Time        // time of last modification
+	Ctime  Time        // time of last inode change
+	Crtime Time        // time of creation (OS X only)
+	Mode   os.FileMode // file mode
+	Nlink  uint32      // number of links
+	Uid    uint32      // owner uid
+	Gid    uint32      // group gid
+	Rdev   uint32      // device numbers
+	Flags  uint32      // chflags(2) flags (OS X only)
+}
 
 // ---------------------------------------------------------------------------
 // A `init` request is the first request sent on a FUSE file system.
@@ -65,7 +83,7 @@ type GetattrRequest struct {
 }
 
 type GetattrResponse struct {
-	Attr fuse.Attr
+	Attr Attr
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +170,7 @@ type LookupResponse struct {
 	Inode      uint64
 	Generation uint64
 	EntryValid time.Duration
-	Attr       fuse.Attr
+	Attr       Attr
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +325,7 @@ type SetattrRequest struct {
 }
 
 type SetattrResponse struct {
-	Attr fuse.Attr
+	Attr Attr
 }
 
 // ---------------------------------------------------------------------------
