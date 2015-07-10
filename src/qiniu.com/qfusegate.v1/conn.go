@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/context"
 	"qiniupkg.com/x/rpc.v7"
 
-	. "qiniu.com/qfuse.proto.v1"
+	. "qiniu.com/boltfs.proto.v1"
 )
 
 // ---------------------------------------------------------------------------

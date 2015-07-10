@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	. "qiniu.com/qfuse.proto.v1"
+	. "qiniu.com/boltfs.proto.v1"
 )
 
 // ---------------------------------------------------------------------------
@@ -222,7 +222,7 @@ func requestAssign(dest reflect.Type) {
 		case "LookupReqid": src = "uint64(req.N)"
 		case "IntrReqId":   src = "uint64(req.IntrID)"
 		default:
-			if f.Type.String() == "qfuse.Time" {
+			if f.Type.String() == "boltfs.Time" {
 				src = fmt.Sprintf("Time(req.%s.UnixNano())", f.Name)
 			} else {
 				src = "req." + f.Name
@@ -430,7 +430,7 @@ import (
 	"unsafe"
 
 	. "golang.org/x/net/context"
-	. "qiniu.com/qfuse.proto.v1"
+	. "qiniu.com/boltfs.proto.v1"
 )
 
 `)

@@ -12,7 +12,7 @@ import (
 	"unsafe"
 
 	. "golang.org/x/net/context"
-	. "qiniu.com/qfuse.proto.v1"
+	. "qiniu.com/boltfs.proto.v1"
 )
 
 func handleInitRequest(ctx Context, host string, req *fuse.InitRequest) {

@@ -1,4 +1,4 @@
-package qfuse
+package boltfs
 
 import (
 	"bazil.org/fuse"
