@@ -13,6 +13,8 @@ X-Reqid: base36(<Reqid:uint64>)
 ## 出错返回包
 
 ```
+X-Err: <ErrorMessage>
+
 Errno int32
 ```
 
