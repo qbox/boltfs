@@ -11,6 +11,8 @@ import (
 
 // ---------------------------------------------------------------------------
 
+var initProc string
+
 var types = []interface{}{
 	new(InitRequest),
 	new(fuse.InitRequest),
@@ -272,6 +274,7 @@ func gen(types []interface{}) {
 	if resp != nil {
 		retExp = "ret"
 		retName := resp.Name()
+		initProc += fmt.Sprintf("\tgob.RegisterName(\"%s\", %s{})\n", retName, retName)
 		fmt.Printf("\tret := new(%s)\n", retName)
 	}
 
@@ -279,6 +282,7 @@ func gen(types []interface{}) {
 		fmt.Printf("\terr := client.Call(ctx, %s, \"POST\", host + \"%s\")\n", retExp, reqPath)
 	} else {
 		argsName := req.Name()
+		initProc += fmt.Sprintf("\tgob.RegisterName(\"%s\", %s{})\n", argsName, argsName)
 		fmt.Printf("\targs := &%s{\n", argsName)
 		requestAssign(req)
 		fmt.Printf("\t}\n")
@@ -327,6 +331,7 @@ func main() {
 package qfusegate
 
 import (
+	"encoding/gob"
 	"bazil.org/fuse"
 
 	. "golang.org/x/net/context"
@@ -338,6 +343,12 @@ import (
 	for i := 0; i < n; i += 4 {
 		gen(types[i:])
 	}
+
+	fmt.Printf(`func init() {
+
+%s}
+
+`, initProc)
 }
 
 // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 package qfusegate
 
 import (
+	"encoding/gob"
 	"bazil.org/fuse"
 
 	. "golang.org/x/net/context"
@@ -557,5 +558,50 @@ func handleInterruptRequest(ctx Context, host string, req *fuse.InterruptRequest
 		return
 	}
 	req.Respond()
+}
+
+func init() {
+
+	gob.RegisterName("InitResponse", InitResponse{})
+	gob.RegisterName("InitRequest", InitRequest{})
+	gob.RegisterName("StatfsResponse", StatfsResponse{})
+	gob.RegisterName("AccessRequest", AccessRequest{})
+	gob.RegisterName("GetattrResponse", GetattrResponse{})
+	gob.RegisterName("GetattrRequest", GetattrRequest{})
+	gob.RegisterName("ListxattrResponse", ListxattrResponse{})
+	gob.RegisterName("ListxattrRequest", ListxattrRequest{})
+	gob.RegisterName("GetxattrResponse", GetxattrResponse{})
+	gob.RegisterName("GetxattrRequest", GetxattrRequest{})
+	gob.RegisterName("RemovexattrRequest", RemovexattrRequest{})
+	gob.RegisterName("SetxattrRequest", SetxattrRequest{})
+	gob.RegisterName("LookupResponse", LookupResponse{})
+	gob.RegisterName("LookupRequest", LookupRequest{})
+	gob.RegisterName("OpenResponse", OpenResponse{})
+	gob.RegisterName("OpenRequest", OpenRequest{})
+	gob.RegisterName("CreateResponse", CreateResponse{})
+	gob.RegisterName("CreateRequest", CreateRequest{})
+	gob.RegisterName("MkdirResponse", MkdirResponse{})
+	gob.RegisterName("MkdirRequest", MkdirRequest{})
+	gob.RegisterName("SymlinkResponse", SymlinkResponse{})
+	gob.RegisterName("SymlinkRequest", SymlinkRequest{})
+	gob.RegisterName("ReadlinkResponse", ReadlinkResponse{})
+	gob.RegisterName("ReadlinkRequest", ReadlinkRequest{})
+	gob.RegisterName("LinkResponse", LinkResponse{})
+	gob.RegisterName("LinkRequest", LinkRequest{})
+	gob.RegisterName("MknodResponse", MknodResponse{})
+	gob.RegisterName("MknodRequest", MknodRequest{})
+	gob.RegisterName("RenameRequest", RenameRequest{})
+	gob.RegisterName("RemoveRequest", RemoveRequest{})
+	gob.RegisterName("ReadResponse", ReadResponse{})
+	gob.RegisterName("ReadRequest", ReadRequest{})
+	gob.RegisterName("WriteResponse", WriteResponse{})
+	gob.RegisterName("WriteRequest", WriteRequest{})
+	gob.RegisterName("SetattrResponse", SetattrResponse{})
+	gob.RegisterName("SetattrRequest", SetattrRequest{})
+	gob.RegisterName("FlushRequest", FlushRequest{})
+	gob.RegisterName("FsyncRequest", FsyncRequest{})
+	gob.RegisterName("ReleaseRequest", ReleaseRequest{})
+	gob.RegisterName("ForgetRequest", ForgetRequest{})
+	gob.RegisterName("InterruptRequest", InterruptRequest{})
 }
 
