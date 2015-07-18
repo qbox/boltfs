@@ -177,13 +177,6 @@ func toReader(p unsafe.Pointer, n uintptr) (r io.Reader) {
 	return bytes.NewReader(b)
 }
 
-func fromReader(p unsafe.Pointer, n uintptr, r io.Reader) (err error) {
-
-	b := ((*[1<<30]byte)(p))[:n]
-	_, err = io.ReadFull(r, b)
-	return
-}
-
 func fromReaderEx(p unsafe.Pointer, n uintptr, ret interface{}, r io.Reader) (err error) {
 
 	b := ((*[1<<30]byte)(p))[:n]
@@ -275,10 +268,10 @@ func newBoltTransport(req *fuse.Header, base http.RoundTripper) *transportImpl {
 	return &transportImpl{auth: auth, reqid: reqid, base: base}
 }
 
-func newBoltClient(req *fuse.Header, base http.RoundTripper) rpc.Client {
+func newBoltClient(req *fuse.Header, base http.RoundTripper) gobClient {
 
 	tr := newBoltTransport(req, base)
-	return rpc.Client{&http.Client{Transport: tr}}
+	return gobClient{rpc.Client{&http.Client{Transport: tr}}}
 }
 
 func (p *transportImpl) RoundTrip(req *http.Request) (resp *http.Response, err error) {
