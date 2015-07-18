@@ -14,8 +14,7 @@ X-Reqid: base36(<Reqid:uint64>)
 
 ```
 X-Err: <ErrorMessage>
-
-Errno int32
+X-Errno: <Errno>
 ```
 
 # 协议
