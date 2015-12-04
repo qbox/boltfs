@@ -1,2 +1,2 @@
-# qbs
-Qiniu Block Storage
+# boltfs
+FileSystem Storage
